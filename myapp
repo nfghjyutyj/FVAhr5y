@@ -1,0 +1,66 @@
+# myapp/models.py
+from django.db import models
+from django.contrib.auth.models import User
+
+class Blog(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+# myapp/views.py
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Blog
+from .forms import BlogForm
+
+@login_required
+def blog_list(request):
+    blogs = Blog.objects.filter(author=request.user)
+    return render(request, 'myapp/blog_list.html', {'blogs': blogs})
+
+@login_required
+def create_blog(request):
+    if request.method == 'POST':
+        form = BlogForm(request.POST)
+        if form.is_valid():
+            blog = form.save(commit=False)
+            blog.author = request.user
+            blog.save()
+            return redirect('blog_list')
+    else:
+        form = BlogForm()
+    return render(request, 'myapp/create_blog.html', {'form': form})
+
+
+# myapp/forms.py
+from django import forms
+from .models import Blog
+
+class BlogForm(forms.ModelForm):
+    class Meta:
+        model = Blog
+        fields = ('title', 'description')
+
+
+# urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('blogs/', views.blog_list, name='blog_list'),
+    path('blogs/create/', views.create_blog, name='create_blog'),
+    # ...
+]
+
+
+# settings.py
+INSTALLED_APPS = [
+    # ...
+    'myapp',
+    # ...
+]
